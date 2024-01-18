@@ -1,33 +1,43 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import {MdAdd, MdDone, MdDelete} from "react-icons/md";
 import './scss/TodoTemplate.scss'
 import TodoHeader from "./TodoHeader";
 import TodoInput from "./TodoInput";
 import TodoMain from "./TodoMain";
+import axios from "axios";
 
 const TodoTemplate = () => {
+
+    // 서버에서 할 일 목록 (JSON)을 요청해서 받아와야 함
+    const API_BASE_URL = 'http://localhost:8383/api/todos';
+
+    // 렌더링 직전에 해야할 코드를 적는 함수
+    useEffect(() => {
+        const fetchData = async () => {
+            // try {
+            //     const response = await axios.get(API_BASE_URL);
+            //     setTodoList(response.data);
+            // } catch (error) {
+            //     console.error(error);
+            // }
+
+            fetch(API_BASE_URL)
+                .then(res => res.json())
+                .then(json => {
+                    setTodoList(json.todos);
+                })
+        };
+
+        fetchData();
+    }, []);
+
 
     /*
         리액트는 부모 컴포넌트에서 자식 컴포넌트로의 데이터 이동이 반대보다 쉽기 때문에
         할 일 데이터는 상위 부모 컴포넌트가 처리하는것이 좋다.
      */
-    const [todoList, setTodoList] = useState( [
-        {
-            id: 1,
-            title: "장보기",
-            done: false
-        },
-        {
-            id: 2,
-            title: "저녁먹기",
-            done: true
-        },
-        {
-            id: 3,
-            title: "수다떨기",
-            done: false
-        },
-    ]);
+    const [todoList, setTodoList] = useState([]);
+
 
     // 데이터 상향식 전달을 위해 부모가 자식에게 함수를 하나 전달
     const addTodo = (todoText) => {
@@ -39,9 +49,7 @@ const TodoTemplate = () => {
         };
 
         const newTodo = {
-            id: makeNewId(),
             title: todoText,
-            done: false
         };
 
         // todoList.push(newTodo);
@@ -52,29 +60,53 @@ const TodoTemplate = () => {
             기존의 상태값을 바꾸는 것은 불가능하고
             새로운 상태를 만들어서 바꿔야 함.
          */
-        setTodoList([...todoList, newTodo]);
-
-        console.log(todoList);
+        fetch(API_BASE_URL, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify(newTodo)
+        })
+            .then(res => res.json())
+            .then(json => {
+                setTodoList(json.todos);
+            })
     };
 
     // 할 일 삭제 처리 함수
     const removeTodo = id => {
         console.log('id : ', id);
 
-        // id를 통해 객체를 탐색한 후 배열에서 제거
-        setTodoList(todoList.filter(todo => todo.id !== id));
+        fetch(`${API_BASE_URL}/${id}`, {
+            method: "delete",
+        }).then(res => res.json())
+            .then(json => {
+                setTodoList(json.todos);
+            })
     };
 
     // 할 일 체크처리 함수
-    const checkTodo = id => {
+    const checkTodo = (id, done) => {
         // console.log('check id: ', id);
 
-        const copyTodoList = [...todoList];
+        // const copyTodoList = [...todoList];
+        //
+        // const foundTodo = copyTodoList.find(todo => todo.id === id);
+        // foundTodo.done = !foundTodo.done;
 
-        const foundTodo = copyTodoList.find(todo => todo.id === id);
-        foundTodo.done = !foundTodo.done;
+        // setTodoList(copyTodoList);
 
-        setTodoList(copyTodoList);
+        fetch(API_BASE_URL, {
+            method: 'PUT',
+            headers: {
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: id,
+                done: !done
+            })
+        }).then(res => res.json())
+            .then(json => setTodoList(json.todos));
     };
 
     // const checkTodo = id => setTodoList(todoList.map(todo => (todo.id === id) ? {...todo, done: !todo.done} : todo));
