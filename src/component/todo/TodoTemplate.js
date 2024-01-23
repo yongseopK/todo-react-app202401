@@ -6,10 +6,12 @@ import TodoInput from "./TodoInput";
 import TodoMain from "./TodoMain";
 import axios from "axios";
 
+import { TODO_URL } from "../../config/host-config";
+
 const TodoTemplate = () => {
 
     // 서버에서 할 일 목록 (JSON)을 요청해서 받아와야 함
-    const API_BASE_URL = 'http://localhost:8383/api/todos';
+    const API_BASE_URL = TODO_URL;
 
     // 렌더링 직전에 해야할 코드를 적는 함수
     useEffect(() => {

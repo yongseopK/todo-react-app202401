@@ -1,10 +1,16 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Button, Container, Grid,
     TextField, Typography, Link
 } from "@mui/material";
+import {AUTH_URL} from "../../config/host-config";
+import {useNavigate} from "react-router-dom";
 
 const Join = () => {
+
+    const redirection = useNavigate();  // 리디렉트 함수를 리턴
+
+    const API_BASE_URL = AUTH_URL;
 
     // 상태변수로 회원가입 입력값 관리
     const [userValue, setUserValue] = useState({
@@ -29,6 +35,28 @@ const Join = () => {
         email: false
     });
 
+    // 검증이 모두 통과되면 계정 생성버튼을 열어주는 논리 상태변수
+    const [lock, setLock] = useState(true);
+
+    // 검증 데이터를 상태변수 여러개에 저장하는 함수
+    const saveInputState = (flag, msg, inputVal, key) => {
+        setCorrect({
+            ...correct,
+            [key]: flag
+        });
+
+        setMessage({
+            ...message,
+            [key]: msg
+        });
+
+
+        setUserValue({
+            ...userValue,
+            [key]: inputVal
+        });
+    };
+
     // 이름 입력값을 검증하고 관리할 함수
     const nameHandler = e => {
         // console.log(e.target.value);
@@ -50,34 +78,60 @@ const Join = () => {
             flag = true
         }
 
-        setCorrect({
-            ...correct,
-            userName: flag
-        });
+        saveInputState(flag, msg, inputVal, 'userName');
+    };
 
-        setMessage({
-            ...message,
-            userName: msg
-        });
+    // 이메일 중복체크 비동기통신 (AJAX)
+    const fetcgDuplicatedCheck = async (email) => {
+        let msg = '', flag = false;
 
+        const response = await fetch(API_BASE_URL + "/check?email=" + email);
+        const json = await response.json();
 
-        setUserValue({
-            ...userValue,
-            userName: inputVal
-        });
+        if (json) {
+            msg = '이메일이 중복되었습니다!';
+            flag = false;
+        } else {
+            msg = '사용 가능한 이메일입니다.';
+            flag = true;
+        }
+
+        setUserValue({...userValue, email: email });
+            setMessage({...message, email: msg });
+        setCorrect({...correct, email: flag});
     };
 
     // 이메일 입력값을 검증하고 관리할 함수
     const emailHandler = e => {
         const inputVal = e.target.value;
-        setUserValue({
-            ...userValue,
-            email: inputVal
-        });
+
+        const emailRegex = /^[a-z0-9\.\-_]+@([a-z0-9\-]+\.)+[a-z]{2,6}$/;
+
+        let msg, flag;
+        if (!inputVal) {
+            msg = '이메일은 필수값입니다!';
+            flag = false;
+        } else if (!emailRegex.test(inputVal)) {
+            msg = '이메일 형식이 아닙니다!';
+            flag = false;
+        } else {
+            fetcgDuplicatedCheck(inputVal);
+            return;
+        }
+
+
+        saveInputState(flag, msg, inputVal, 'email');
     };
 
     // 패스워드 입력값을 검증하고 관리할 함수
     const passwordHandler = e => {
+
+        // 패스워드를 입력하면 확인란을 비우기
+        document.getElementById('password-check').value = '';
+        document.getElementById('check-text').textContent = '';
+        setMessage({...message, passwordCheck: ''});
+        setCorrect({...correct, passwordCheck: false});
+
         const inputVal = e.target.value;
 
         const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,20}$/;
@@ -95,20 +149,59 @@ const Join = () => {
             flag = true;
         }
 
-        setCorrect({
-            ...correct,
-            password: flag
-        })
+        saveInputState(flag, msg, inputVal, 'password');
+    };
 
-        setMessage({
-            ...message,
-            password: msg
+    // 패스워드 확인란을 검증할 함수
+    const pwCheckHandler = e => {
+
+        const inputVal = e.target.value;
+
+        let msg, flag;
+        if (!inputVal) { // 패스워드 안적은거
+            msg = '비밀번호 확인란은 필수값입니다!';
+            flag = false;
+        } else if (userValue.password !== inputVal) {
+            msg = '패스워드가 일치하지 않습니다.';
+            flag = false;
+        } else {
+            msg = '패스워드가 일치합니다.';
+            flag = true;
+        }
+
+        saveInputState(flag, msg, inputVal, 'passwordCheck');
+
+
+    };
+
+    // 4개의 입력란이 모두 검증에 통과했는지 여부를 검사
+    const inputIsValid = () => {
+        for(const key in correct) {
+            const value = correct[key];
+
+            if(!value) return false;
+        }
+        return true;
+    };
+
+    // 회원가입 비동기 요청을 서버로 보내는 함수
+    const fetchSignUpPost = async () => {
+        const response = await fetch(API_BASE_URL, {
+            method: 'POST',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify(userValue)
         });
 
-        setUserValue({
-            ...userValue,
-            password: inputVal
-        });
+        if(response.status === 200) {
+            const json = await response.json();
+            console.log(json);
+
+            // 로그인 페이지로 리디렉션
+            redirection('/login');
+
+        } else {
+            alert("서버와의 통신이 원활하지 않습니다.");
+        }
     };
 
     // 계정 생성 버튼을 누르면 동작할 내용
@@ -116,7 +209,25 @@ const Join = () => {
         e.preventDefault();
         console.log("눌림ㅋ");
         console.log(userValue);
+
+        if(!lock) {    // 검증 통과
+            fetchSignUpPost();
+        } else {
+            alert("입력란을 다시 확인해주세요.");
+        }
     };
+
+    const {userName: un, password: pw, passwordCheck: pwc, email: em} = correct;
+    useEffect(() => {
+        // console.log('correct가 바뀌면 useEffect는 실행됨');
+        // console.log(inputIsValid());
+
+        if(inputIsValid()) {
+            setLock(false);
+        } else {
+            setLock(true);
+        }
+    }, [un, pw, pwc, em]);
 
     return (
         <Container component="main" maxWidth="xs" style={{margin: "200px auto"}}>
@@ -191,7 +302,7 @@ const Join = () => {
                             type="password"
                             id="password-check"
                             autoComplete="check-password"
-
+                            onChange={pwCheckHandler}
                         />
                         <span id="check-text" style={
                             correct.passwordCheck
@@ -205,9 +316,12 @@ const Join = () => {
                             type="submit"
                             fullWidth
                             variant="contained"
-                            style={{background: '#38d9a9'}}
+                            style={
+                            lock
+                                ? {background: '#eee'}
+                                : {background: '#38d9a9'}}
                             onClick={joinClickHandler}
-                            disabled
+                            disabled={lock}
                         >
                             계정 생성
                         </Button>
