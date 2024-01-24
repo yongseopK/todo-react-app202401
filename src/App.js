@@ -5,6 +5,7 @@ import Header from "./component/layout/Header";
 import Footer from "./component/layout/Footer";
 import {Route, Routes} from "react-router-dom";
 import Join from "./component/user/Join";
+import Login from "./component/user/Login";
 
 function App() {
     return (
@@ -13,6 +14,7 @@ function App() {
             <Routes>
                 <Route path={"/"} element={<TodoTemplate/>}/>
                 <Route path={"/join"} element={<Join/>}/>
+                <Route path={"/login"} element={<Login/>}/>
             </Routes>
             <Footer/>
         </>
