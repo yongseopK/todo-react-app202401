@@ -2,6 +2,7 @@ import React from 'react';
 import {Grid, Button, Container, Typography, TextField} from "@mui/material";
 import { Link, useNavigate } from 'react-router-dom';
 import { AUTH_URL } from "../../config/host-config";
+import {TOKEN, USERNAME} from "../../util/login-util";
 
 const Login = () => {
 
@@ -26,8 +27,15 @@ const Login = () => {
       }
 
       if(response.status === 200) {
-          const responseData = await response.json();
-          console.log(responseData);
+          const {token, userName} = await response.json();
+          // console.log(responseData);
+
+          // 클라이언트에서 로그인을 했다는 사실을 알게 해야 함
+          // 서버에서 받은 토큰을 브라우저에 저장할 것임
+          // 1. 로컬 스토리지 - 데이터를 브라우저가 종료되어도 계속 보관한
+          // 2. 세션 스토리지 - 데이터를 브라우저가 종료되는 순간 삭제함
+          localStorage.setItem(TOKEN, token);
+          localStorage.setItem(USERNAME, userName);
 
           redirection('/');
       }
