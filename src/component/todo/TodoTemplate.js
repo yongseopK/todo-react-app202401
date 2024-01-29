@@ -1,12 +1,11 @@
 import React, {useEffect, useState} from "react";
-import {MdAdd, MdDone, MdDelete} from "react-icons/md";
 import './scss/TodoTemplate.scss'
 import TodoHeader from "./TodoHeader";
 import TodoInput from "./TodoInput";
 import TodoMain from "./TodoMain";
 
-import { TODO_URL } from "../../config/host-config";
-import {getCurrentLoginUser} from "../../util/login-util";
+import { TODO_URL, AUTH_URL } from "../../config/host-config";
+import {getCurrentLoginUser, ROLE, TOKEN} from "../../util/login-util";
 import {useNavigate} from "react-router-dom";
 
 import { Spinner } from "reactstrap";
@@ -28,6 +27,31 @@ const TodoTemplate = () => {
     const requestHeader = {
         'content-type': 'application/json',
         'Authorization': `Bearer ${token}`
+    };
+
+    // 등급을 올리는 서버 비동기 통신 함수
+    const fetchPromote = async () => {
+      const response = await fetch(AUTH_URL + "/promote", {
+          method: "PUT",
+          headers: requestHeader,
+      });
+
+      if (response.status === 200) {
+         const json = await response.json();
+
+         // 토큰 데이터 갱신
+         localStorage.setItem(TOKEN, json.token);
+         localStorage.setItem(ROLE, json.role);
+         setToken(json.token);
+      } else {
+          alert('이미 등급이 승격된 회원입니다.');
+      }
+    };
+
+    // 등급을 상승시키는 함수
+    const promote = () => {
+        console.log("등급 올림?");
+        fetchPromote();
     };
 
     // 렌더링 직전에 해야할 코드를 적는 함수
@@ -94,9 +118,14 @@ const TodoTemplate = () => {
             headers: requestHeader,
             body: JSON.stringify(newTodo)
         })
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 200) return res.json();
+                else if (res.status === 401) {
+                    alert("일반 회원은 일정 등록이 5개로 제한됩니다! 프리미엄회원이 되어보세요!");
+                }
+            })
             .then(json => {
-                setTodoList(json.todos);
+                json && setTodoList(json.todos);
             })
     };
 
@@ -143,8 +172,8 @@ const TodoTemplate = () => {
     // 로딩이 끝난 후 보여줄 화면
     const loadEndedPage = (
         <div className='TodoTemplate'>
-            <TodoHeader count={countRestTodo}/>
-            <TodoMain todoList={todoList} onRemove={removeTodo} onCheck={checkTodo}/>
+            <TodoHeader count={countRestTodo} onPromote={promote} />
+            <TodoMain todoList={todoList} onRemove={removeTodo} onCheck={checkTodo} />
             <TodoInput onAdd={addTodo}/>
         </div>
     );
