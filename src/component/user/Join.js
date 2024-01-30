@@ -6,7 +6,7 @@ import {
 import {AUTH_URL} from "../../config/host-config";
 import {useNavigate} from "react-router-dom";
 import "./Join.scss";
-import anonymous from '../../assets/img/anonymous.jpeg';
+import anonymous from '../../assets/img/image-add.png';
 
 const Join = () => {
 
